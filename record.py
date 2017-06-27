@@ -10,11 +10,12 @@ import imagehash
 from psd_tools import PSDImage
 
 from PyQt5 import QtWidgets
+from PyQt5.Qt import Qt
 from PyQt5.QtGui import QIntValidator
 
 
 class CONST(object):
-    DEFAULT_PATH = "D:/Drawing/6fdadfaew 3/rhbafdsafdas.psd"
+    DEFAULT_PATH = "D:/Temp/Drawing/gafsdgdsaSfdgsbdafdsa/vdsvavdsavdsafdsafdsa.psd"
 
 
 class PSDStoreThread(Thread):
@@ -83,6 +84,8 @@ class PSDStoreThread(Thread):
 class WindowHandler(QtWidgets.QWidget):
     def __init__(self):
         QtWidgets.QWidget.__init__(self)
+
+        self.setWindowFlags(Qt.WindowStaysOnTopHint)
 
         self.root_layout = QtWidgets.QVBoxLayout()
         self.setLayout(self.root_layout)
