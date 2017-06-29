@@ -10,14 +10,19 @@ dependency
 """
 
 import os
+import platform
 import time
 import datetime
+import subprocess
 from threading import Thread
 from threading import Lock
 from threading import active_count
 
 import imagehash
+import numpy as np
+import imageio
 from psd_tools import PSDImage
+from PIL import Image
 
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import QThread
@@ -29,8 +34,14 @@ from win32com import client
 
 
 class CONST(object):
-    DOCUMENT = client.Dispatch("Photoshop.Application").Application.ActiveDocument
-    DEFAULT_PATH = f"{DOCUMENT.path}{DOCUMENT.name}"
+    @property
+    def DEFAULT_PATH(self):
+        try:
+            psapp = client.Dispatch("Photoshop.Application").Application
+            doc = psapp.ActiveDocument
+        except:
+            return None
+        return f"{doc.path}{doc.name}"
 
 
 class PSDStoreThread(QThread):
@@ -93,8 +104,8 @@ class PSDStoreThread(QThread):
         as_img = as_img.resize(target_size)
         as_img.save(self.png_path)
 
-        self.save_success_signal.emit()
         print("Snapshot!")
+        self.save_success_signal.emit()
 
 
 class PSDStoreThreadHolder(QThread):
@@ -132,7 +143,7 @@ class PSDStoreThreadHolder(QThread):
             if self.cancellation_token_flipped:
                 break
 
-            time.sleep(1.5)
+            time.sleep(1.25)
 
             last_hash = last_hash[-1:]
             psd_thread = PSDStoreThread(
@@ -159,6 +170,7 @@ class PSDStoreThreadHolder(QThread):
 
 class WindowHandler(QtWidgets.QWidget):
 
+    const = CONST()
     workthread = None
 
     def __init__(self):
@@ -174,9 +186,11 @@ class WindowHandler(QtWidgets.QWidget):
 
     def build_ui(self):
         self.psd_path_lineedit = QtWidgets.QLineEdit()
+
+        self.showdir_btn = QtWidgets.QPushButton("Show")
+        self.showdir_btn.setMinimumHeight(50)
         self.start_btn = QtWidgets.QPushButton("Start")
         self.start_btn.setMinimumHeight(50)
-
         self.stop_btn = QtWidgets.QPushButton("Stop")
         self.stop_btn.setMinimumHeight(50)
 
@@ -200,39 +214,45 @@ class WindowHandler(QtWidgets.QWidget):
 
         self.root_layout.addWidget(self.psd_path_lineedit)
         self.root_layout.addWidget(self.sizecontrol_widget)
+        self.root_layout.addWidget(self.showdir_btn)
         self.root_layout.addWidget(self.start_btn)
         self.root_layout.addWidget(self.stop_btn)
 
-        self.psd_path_lineedit.setText(CONST.DEFAULT_PATH)
+        self.psd_path_lineedit.setText(self.const.DEFAULT_PATH)
 
+        self.showdir_btn.clicked.connect(self.showdir)
         self.start_btn.clicked.connect(self.start)
         self.stop_btn.clicked.connect(self.stop)
 
+    def showdir(self, e):
+        target_psd_path = self.psd_path_lineedit.text()
+        target_dirpath = self.build_target_path()
+        if not target_dirpath:
+            return
+
+        if platform.system() == "Windows":
+            os.startfile(target_dirpath)
+        elif platform.system() == "Darwin":
+            subprocess.Popen(["open", target_dirpath])
+        else:
+            subprocess.Popen(["xdg-open", target_dirpath])
+
     def start(self, e):
         target_psd_path = self.psd_path_lineedit.text()
+        self.target_dirpath = self.build_target_path()
+        if not self.target_dirpath or \
+           not os.path.isdir(self.target_dirpath):
+            os.makedirs(self.target_dirpath)
 
-        if not os.path.isfile(target_psd_path):
-            if not os.path.isfile(target_psd_path + ".psd"):
-                print("[!] invalid target path")
-                return
-            else:
-                target_psd_path = target_psd_path + ".psd"
-
-        target_filename = os.path.basename(target_psd_path).replace(".psd", "")
-        target_dirpath = \
-            f"{os.path.dirname(target_psd_path)}/{target_filename}/recorder"
-        if not os.path.isdir(target_dirpath):
-            os.makedirs(target_dirpath)
-
-        target_width = int(self.savesize_width.text())
-        target_height = int(self.savesize_height.text())
+        self.target_width = int(self.savesize_width.text())
+        self.target_height = int(self.savesize_height.text())
 
         self.start_btn.setEnabled(False)
         self.workthread = PSDStoreThreadHolder(
-            target_dirpath,
-            target_psd_path,
-            target_width,
-            target_height
+            self.target_dirpath,
+            self.psd_path_lineedit.text(),
+            self.target_width,
+            self.target_height
         )
         self.workthread.finish_signal.connect(self.on_complete)
         self.workthread.start()
@@ -240,10 +260,47 @@ class WindowHandler(QtWidgets.QWidget):
     def stop(self, e):
         if self.workthread:
             self.workthread.cancellation_token.emit()
+        Thread(target=self.multi_image_write).start()
+        self.close()
 
     def on_complete(self, e=None):
         self.start_btn.setEnabled(True)
-        self.workthread = None
+        if self.workthread:
+            self.workthread = None
+
+    def multi_image_write(self):
+        def sort_key(path):
+            base = os.path.basename(path)
+            basename = os.path.splitext(base)[0]
+            numbering = basename.split('_')[-1]
+            if numbering.isdigit():
+                return int(numbering)
+            return -1
+
+        target_dir = self.build_target_path()
+        if not target_dir:
+            return
+
+        target_files = [f"{target_dir}/{x}" for x in os.listdir(target_dir)]
+        target_files = list(filter(lambda x: x.endswith(".png"), target_files))
+        target_files.sort(key=sort_key)
+        imgs = [Image.open(target_file) for target_file in target_files]
+        arrs = [np.asarray(img) for img in imgs]
+        imageio.mimwrite(f"{target_dir}/dst.gif", arrs, fps=12, loop=0)
+        imageio.mimwrite(f"{target_dir}/dst.mp4", arrs, fps=12)
+        print("gif/mp4 save finished!")
+
+    def build_target_path(self):
+        target_psd_path = self.psd_path_lineedit.text()
+        basename = os.path.basename(target_psd_path)
+        target_filename = os.path.splitext(basename)[0]
+        if not os.path.isfile(target_psd_path):
+            if not os.path.isfile(target_psd_path + ".psd"):
+                print("[!] invalid target path")
+                return None
+            else:
+                target_psd_path = target_psd_path + ".psd"
+        return f"{os.path.dirname(target_psd_path)}/{target_filename}/recorder"
 
 
 if __name__ == "__main__":
