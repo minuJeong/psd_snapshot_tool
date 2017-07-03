@@ -1,3 +1,6 @@
 *.gif
 *.mp4
 build/
+*.pyc
+*.pro
+*.user
