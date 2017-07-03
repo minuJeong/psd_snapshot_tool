@@ -378,7 +378,7 @@ class WindowHandler(mainwindow.Ui_MainWindow):
             del baseimg
 
         print("Serializing images..")
-        target_files = [f"{paging_dir}/{x}" for x in os.listdir(target_dir)]
+        target_files = [f"{paging_dir}/{x}" for x in os.listdir(paging_dir)]
         target_files = list(filter(lambda x: x.endswith(f".{self.target_file_type}"), target_files))
         target_files.sort(key=sort_key)
         unified_imgs = [Image.open(target_file) for target_file in target_files]
