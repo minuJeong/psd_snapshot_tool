@@ -99,6 +99,17 @@
   </widget>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
+ <tabstops>
+  <tabstop>PSDPathLineInput</tabstop>
+  <tabstop>MakeDivisable16Button</tabstop>
+  <tabstop>ShowDirectoryButton</tabstop>
+  <tabstop>SaveSizeWidthLineEdit</tabstop>
+  <tabstop>SaveSizeHeightLineEdit</tabstop>
+  <tabstop>FileTypeComboBox</tabstop>
+  <tabstop>StartButton</tabstop>
+  <tabstop>FrameRateLineEdit</tabstop>
+  <tabstop>StopButton</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>

@@ -55,6 +55,14 @@ class Ui_MainWindow(object):
 
         self.retranslateUi(MainWindow)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
+        MainWindow.setTabOrder(self.PSDPathLineInput, self.MakeDivisable16Button)
+        MainWindow.setTabOrder(self.MakeDivisable16Button, self.ShowDirectoryButton)
+        MainWindow.setTabOrder(self.ShowDirectoryButton, self.SaveSizeWidthLineEdit)
+        MainWindow.setTabOrder(self.SaveSizeWidthLineEdit, self.SaveSizeHeightLineEdit)
+        MainWindow.setTabOrder(self.SaveSizeHeightLineEdit, self.FileTypeComboBox)
+        MainWindow.setTabOrder(self.FileTypeComboBox, self.StartButton)
+        MainWindow.setTabOrder(self.StartButton, self.FrameRateLineEdit)
+        MainWindow.setTabOrder(self.FrameRateLineEdit, self.StopButton)
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate

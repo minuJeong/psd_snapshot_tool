@@ -10,10 +10,12 @@ dependency
 """
 
 import os
+import shutil
 import platform
 import time
 import datetime
 import subprocess
+import gc
 from threading import Thread
 from threading import Lock
 from threading import active_count
@@ -127,9 +129,9 @@ class PSDStoreThreadHolder(QThread):
     cancellation_token_flipped = False
 
     def __init__(self,
-            target_dirpath, target_psd_path,
-            target_width, target_height,
-            target_file_type):
+                 target_dirpath, target_psd_path,
+                 target_width, target_height,
+                 target_file_type):
         super(PSDStoreThreadHolder, self).__init__()
         self.target_dirpath = target_dirpath
         self.target_psd_path = target_psd_path
@@ -189,6 +191,26 @@ class WindowHandler(mainwindow.Ui_MainWindow):
     const = CONST()
     workthread = None
 
+    @property
+    def target_file_type(self):
+        return self.FileTypeComboBox.currentText()
+
+    @property
+    def target_width(self):
+        width_input = self.SaveSizeWidthLineEdit.text()
+        if width_input.isdigit():
+            return int(width_input)
+        else:
+            return 0
+
+    @property
+    def target_height(self):
+        height_input = self.SaveSizeHeightLineEdit.text()
+        if height_input.isdigit():
+            return int(height_input)
+        else:
+            return 0
+
     def __init__(self, mainwin):
         super(WindowHandler, self).__init__()
 
@@ -203,6 +225,17 @@ class WindowHandler(mainwindow.Ui_MainWindow):
         self.StartButton.clicked.connect(self.start)
         self.StopButton.clicked.connect(self.stop)
         self.PreviewLabel.setPixmap(QPixmap(""))
+
+        self.mainwin.setFocusPolicy(Qt.StrongFocus)
+        self.mainwin.keyPressEvent = self.keyPressEvent
+
+    def keyPressEvent(self, e):
+        if e.key() == Qt.Key_Enter:
+            mods = QtWidgets.QApplication.keyboardModifiers()
+            print(mods)
+            if mods == Qt.ShiftModifier:
+                print("BVDSVDS")
+            e.accept()
 
     def make_divisable_by_16(self, e):
         try:
@@ -248,25 +281,8 @@ class WindowHandler(mainwindow.Ui_MainWindow):
            not os.path.isdir(self.target_dirpath):
             os.makedirs(self.target_dirpath)
 
-        width_input = self.SaveSizeWidthLineEdit.text()
-        height_input = self.SaveSizeHeightLineEdit.text()
-
-        self.target_width = None
-        self.target_height = None
-
-        if height_input.isdigit():
-            self.target_width = int(width_input)
-        else:
-            self.target_width = 0
-
-        if height_input.isdigit():
-            self.target_height = int(height_input)
-        else:
-            self.target_height = 0
-
-        self.target_file_type = self.FileTypeComboBox.currentText()
-
         self.StartButton.setEnabled(False)
+        self.FileTypeComboBox.setEnabled(False)
         self.workthread = PSDStoreThreadHolder(
             self.target_dirpath,
             self.PSDPathLineInput.text(),
@@ -312,28 +328,76 @@ class WindowHandler(mainwindow.Ui_MainWindow):
         if not target_dir:
             return
 
+        print("Preparing images..")
         target_files = [f"{target_dir}/{x}" for x in os.listdir(target_dir)]
-        target_files = list(filter(lambda x: x.endswith(".png"), target_files))
+        target_files = list(filter(lambda x: x.endswith(f".{self.target_file_type}"), target_files))
         target_files.sort(key=sort_key)
-        imgs = [Image.open(target_file) for target_file in target_files]
-        max_width = max([img.size[0] for img in imgs])
-        max_height = max([img.size[1] for img in imgs])
-        resized_imgs = []
-        for img in imgs:
-            baseimg = Image.new("RGB", (max_width, max_height), (255, 255, 255))
+        raw_imgs = [Image.open(target_file) for target_file in target_files]
+        max_width = max([img.size[0] for img in raw_imgs])
+        max_height = max([img.size[1] for img in raw_imgs])
+
+        target_ratio = 1.0
+        if self.target_width != 0 or self.target_height != 0:
+            w_ratio = self.target_width / max_width
+            h_ratio = self.target_height / max_height
+            target_ratio = min(w_ratio, h_ratio)
+        target_width = int(max_width * target_ratio)
+        target_height = int(max_height * target_ratio)
+
+        print("Unifying image sizes..")
+        paging_dir = ".PAGING"
+        if os.path.isdir(paging_dir):
+            shutil.rmtree(paging_dir)
+            time.sleep(1)
+        os.makedirs(paging_dir)
+
+        count = len(raw_imgs)
+        for i, img in enumerate(raw_imgs):
+            print(f"Resizing: {i + 1} / {count}..")
+            resized_img = img
+            if not target_ratio == 1.0:
+                resized_img = img.resize((target_width, target_height), Image.BICUBIC)
+
+            if resized_img.size[0] == target_width and resized_img.size[1] == target_height:
+                resized_img.save(f"{paging_dir}/unif_{i}.{self.target_file_type}")
+
+                raw_imgs.remove(img)
+                del img
+                continue
+
+            print("DIFFERENT SIZE!")
+            baseimg = Image.new("RGB", target_size, (255, 255, 255))
             left = (baseimg.size[0] / 2) - (img.size[0] / 2)
             top = (baseimg.size[1] / 2) - (img.size[1] / 2)
             rect = (int(left), int(top))
             baseimg.paste(img, rect)
-            resized_imgs.append(baseimg)
-        arrs = [np.asarray(img) for img in resized_imgs]
+            baseimg.save(f"{paging_dir}/unif_{i}.{self.target_file_type}")
+
+            raw_imgs.remove(img)
+            del img
+            del baseimg
+
+        print("Serializing images..")
+        target_files = [f"{paging_dir}/{x}" for x in os.listdir(target_dir)]
+        target_files = list(filter(lambda x: x.endswith(f".{self.target_file_type}"), target_files))
+        target_files.sort(key=sort_key)
+        unified_imgs = [Image.open(target_file) for target_file in target_files]
+        arrs = [np.asarray(img) for img in unified_imgs]
+
         framerate_input = self.FrameRateLineEdit.text()
         target_framerate = 8
         if framerate_input.isdigit():
             target_framerate = int(framerate_input)
+
+        print("starting gif save..")
         imageio.mimwrite(f"{target_dir}/dst.gif", arrs, fps=target_framerate, loop=0)
+
+        print("Gif Done!")
         imageio.mimwrite(f"{target_dir}/dst.mp4", arrs, fps=target_framerate)
-        print("gif/mp4 save finished!")
+        print("MP4 Done!")
+
+        shutil.rmtree(paging_dir)
+        print("Purge paging Done!")
 
     def build_target_path(self):
         target_psd_path = self.PSDPathLineInput.text()
