@@ -289,15 +289,21 @@ class WindowHandler(mainwindow.Ui_MainWindow):
         imgs = [Image.open(target_file) for target_file in target_files]
         max_width = max([img.size[0] for img in imgs])
         max_height = max([img.size[1] for img in imgs])
+        resized_imgs = []
         for img in imgs:
-            baseimg = Image.new("RGB", (max_width, max_height))
+            baseimg = Image.new("RGB", (max_width, max_height), (255, 255, 255))
             left = (baseimg.size[0] / 2) - (img.size[0] / 2)
             top = (baseimg.size[1] / 2) - (img.size[1] / 2)
-            rect = (int(left), int(top), *img.size)
+            rect = (int(left), int(top))
             baseimg.paste(img, rect)
-        arrs = [np.asarray(img) for img in imgs]
-        imageio.mimwrite(f"{target_dir}/dst.gif", arrs, fps=12, loop=0)
-        imageio.mimwrite(f"{target_dir}/dst.mp4", arrs, fps=12)
+            resized_imgs.append(baseimg)
+        arrs = [np.asarray(img) for img in resized_imgs]
+        framerate_input = self.FrameRateLineEdit.text()
+        target_framerate = 8
+        if framerate_input.isdigit():
+            target_framerate = int(framerate_input)
+        imageio.mimwrite(f"{target_dir}/dst.gif", arrs, fps=target_framerate, loop=0)
+        imageio.mimwrite(f"{target_dir}/dst.mp4", arrs, fps=target_framerate)
         print("gif/mp4 save finished!")
 
     def build_target_path(self):
