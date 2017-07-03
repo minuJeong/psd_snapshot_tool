@@ -29,6 +29,7 @@ from PyQt5.QtCore import QThread
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.Qt import Qt
 from PyQt5.QtGui import QIntValidator
+from PyQt5.QtGui import QPixmap
 
 from win32com import client
 
@@ -41,9 +42,9 @@ class CONST(object):
         try:
             psapp = client.Dispatch("Photoshop.Application").Application
             doc = psapp.ActiveDocument
+            return f"{doc.path}{doc.name}"
         except:
             return None
-        return f"{doc.path}{doc.name}"
 
 
 class PSDStoreThread(QThread):
@@ -53,7 +54,7 @@ class PSDStoreThread(QThread):
     hashlock = None
     last_hash = None
 
-    save_success_signal = pyqtSignal()
+    save_success_signal = pyqtSignal(str)
 
     def __init__(self, psd_path, png_path, override_size, hashlock, last_hash):
         super(PSDStoreThread, self).__init__()
@@ -95,9 +96,9 @@ class PSDStoreThread(QThread):
             w_ratio = target_w / org_size[0]
             h_ratio = target_h / org_size[1]
 
-            target_ratio = min(w_radef, h_ratio)
-            target_w = int(org_sizedef * target_ratio)
-            target_h = int(org_sizedef * target_ratio)
+            target_ratio = min(w_ratio, h_ratio)
+            target_w = int(org_size[0] * target_ratio)
+            target_h = int(org_size[1] * target_ratio)
 
             target_size = (target_w, target_h)
         else:
@@ -107,7 +108,7 @@ class PSDStoreThread(QThread):
         as_img.save(self.png_path)
 
         print("Snapshot!")
-        self.save_success_signal.emit()
+        self.save_success_signal.emit(self.png_path)
 
 
 class PSDStoreThreadHolder(QThread):
@@ -120,16 +121,21 @@ class PSDStoreThreadHolder(QThread):
     index = 0
 
     cancellation_token = pyqtSignal()
+    progress_signal = pyqtSignal(str)
     finish_signal = pyqtSignal()
 
     cancellation_token_flipped = False
 
-    def __init__(self, target_dirpath, target_psd_path, target_width, target_height):
+    def __init__(self,
+            target_dirpath, target_psd_path,
+            target_width, target_height,
+            target_file_type):
         super(PSDStoreThreadHolder, self).__init__()
         self.target_dirpath = target_dirpath
         self.target_psd_path = target_psd_path
         self.target_width = target_width
         self.target_height = target_height
+        self.target_file_type = target_file_type
 
         self.cancellation_token.connect(self.cancel)
 
@@ -145,7 +151,14 @@ class PSDStoreThreadHolder(QThread):
             if self.cancellation_token_flipped:
                 break
 
-            time.sleep(0.75)
+            try:
+                psapp = client.Dispatch("Photoshop.Application").Application
+                doc = psapp.ActiveDocument
+                doc.save()
+            except:
+                pass
+
+            time.sleep(1.50)
 
             last_hash = last_hash[-1:]
             psd_thread = PSDStoreThread(
@@ -156,18 +169,19 @@ class PSDStoreThreadHolder(QThread):
                 last_hash
             )
 
-            psd_thread.save_success_signal.connect(self.add_index)
+            psd_thread.save_success_signal.connect(self.on_save_file)
             psd_thread.start()
             psd_thread.wait()
 
         # will never happen
         self.finish_signal.emit()
 
-    def add_index(self):
+    def on_save_file(self, filepath):
+        self.progress_signal.emit(filepath)
         self.index += 1
 
     def get_cachename(self):
-        return f"{self.target_dirpath}/cached_{self.index}.png"
+        return f"{self.target_dirpath}/cached_{self.index}.{self.target_file_type}"
 
 
 class WindowHandler(mainwindow.Ui_MainWindow):
@@ -188,6 +202,7 @@ class WindowHandler(mainwindow.Ui_MainWindow):
         self.ShowDirectoryButton.clicked.connect(self.showdir)
         self.StartButton.clicked.connect(self.start)
         self.StopButton.clicked.connect(self.stop)
+        self.PreviewLabel.setPixmap(QPixmap(""))
 
     def make_divisable_by_16(self, e):
         try:
@@ -249,13 +264,17 @@ class WindowHandler(mainwindow.Ui_MainWindow):
         else:
             self.target_height = 0
 
+        self.target_file_type = self.FileTypeComboBox.currentText()
+
         self.StartButton.setEnabled(False)
         self.workthread = PSDStoreThreadHolder(
             self.target_dirpath,
             self.PSDPathLineInput.text(),
             self.target_width,
-            self.target_height
+            self.target_height,
+            self.target_file_type
         )
+        self.workthread.progress_signal.connect(self.on_progress)
         self.workthread.finish_signal.connect(self.on_complete)
         self.workthread.start()
 
@@ -264,6 +283,16 @@ class WindowHandler(mainwindow.Ui_MainWindow):
             self.workthread.cancellation_token.emit()
         Thread(target=self.multi_image_write).start()
         self.mainwin.close()
+
+    def on_progress(self, snapshot_path):
+        try:
+            size = self.PreviewLabel.size()
+            pixmap = QPixmap(snapshot_path)
+            self.PreviewLabel.setPixmap(
+                pixmap.scaled(size, Qt.KeepAspectRatio)
+            )
+        except e as Exception:
+            print(e)
 
     def on_complete(self, e=None):
         self.StartButton.setEnabled(True)
