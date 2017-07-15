@@ -36,6 +36,7 @@ from PyQt5.QtGui import QPixmap
 from win32com import client
 
 from ui.record import mainwindow
+from palette_handler import PaletteHandler
 
 
 class CONST(object):
@@ -120,9 +121,10 @@ class PSDStoreThreadHolder(QThread):
     target_width = 0
     target_height = 0
 
-    index = 0
+    index = 456
 
     cancellation_token = pyqtSignal()
+    before_save_signal= pyqtSignal()
     progress_signal = pyqtSignal(str)
     finish_signal = pyqtSignal()
 
@@ -153,12 +155,7 @@ class PSDStoreThreadHolder(QThread):
             if self.cancellation_token_flipped:
                 break
 
-            try:
-                psapp = client.Dispatch("Photoshop.Application").Application
-                doc = psapp.ActiveDocument
-                doc.save()
-            except:
-                pass
+            self.before_save_signal.emit()
 
             time.sleep(1.50)
 
@@ -186,136 +183,19 @@ class PSDStoreThreadHolder(QThread):
         return f"{self.target_dirpath}/cached_{self.index}.{self.target_file_type}"
 
 
-class WindowHandler(mainwindow.Ui_MainWindow):
+class MimRecThread(QThread):
 
-    const = CONST()
-    workthread = None
+    finish_signal = pyqtSignal()
 
-    @property
-    def target_file_type(self):
-        return self.FileTypeComboBox.currentText()
+    def __init__(self, target_dir, target_file_type, target_width, target_height, target_framerate):
+        super(MimRecThread, self).__init__()
+        self.target_dir = target_dir
+        self.target_file_type = target_file_type
+        self.target_width = target_width
+        self.target_height = target_height
+        self.target_framerate = target_framerate
 
-    @property
-    def target_width(self):
-        width_input = self.SaveSizeWidthLineEdit.text()
-        if width_input.isdigit():
-            return int(width_input)
-        else:
-            return 0
-
-    @property
-    def target_height(self):
-        height_input = self.SaveSizeHeightLineEdit.text()
-        if height_input.isdigit():
-            return int(height_input)
-        else:
-            return 0
-
-    def __init__(self, mainwin):
-        super(WindowHandler, self).__init__()
-
-        self.mainwin = mainwin
-        self.mainwin.setWindowFlags(Qt.WindowStaysOnTopHint)
-
-        self.setupUi(self.mainwin)
-
-        self.PSDPathLineInput.setText(self.const.DEFAULT_PATH)
-        self.MakeDivisable16Button.clicked.connect(self.make_divisable_by_16)
-        self.ShowDirectoryButton.clicked.connect(self.showdir)
-        self.StartButton.clicked.connect(self.start)
-        self.StopButton.clicked.connect(self.stop)
-        self.PreviewLabel.setPixmap(QPixmap(""))
-
-        self.mainwin.setFocusPolicy(Qt.StrongFocus)
-        self.mainwin.keyPressEvent = self.keyPressEvent
-
-    def keyPressEvent(self, e):
-        if e.key() == Qt.Key_Enter:
-            mods = QtWidgets.QApplication.keyboardModifiers()
-            print(mods)
-            if mods == Qt.ShiftModifier:
-                print("BVDSVDS")
-            e.accept()
-
-    def make_divisable_by_16(self, e):
-        try:
-            psapp = client.Dispatch("Photoshop.Application").Application
-            if not psapp:
-                print("Photoshop is not running")
-                return
-
-            doc = psapp.ActiveDocument
-            if not doc:
-                print("No document is opened.")
-                return
-
-            width = doc.width
-            height = doc.height
-            target_width = int(width - (width % 16))
-            target_height = int(height - (height % 16))
-            doc.ResizeImage(target_width, target_height)
-
-        except Exception as e:
-            print(f"Error resizing: {e}")
-
-    def showdir(self, e):
-        target_psd_path = self.PSDPathLineInput.text()
-        target_dirpath = self.build_target_path()
-        if not target_dirpath:
-            return
-
-        if not os.path.isdir(target_dirpath):
-            os.makedirs(target_dirpath)
-
-        if platform.system() == "Windows":
-            os.startfile(target_dirpath)
-        elif platform.system() == "Darwin":
-            subprocess.Popen(["open", target_dirpath])
-        else:
-            subprocess.Popen(["xdg-open", target_dirpath])
-
-    def start(self, e):
-        target_psd_path = self.PSDPathLineInput.text()
-        self.target_dirpath = self.build_target_path()
-        if not self.target_dirpath or \
-           not os.path.isdir(self.target_dirpath):
-            os.makedirs(self.target_dirpath)
-
-        self.StartButton.setEnabled(False)
-        self.FileTypeComboBox.setEnabled(False)
-        self.workthread = PSDStoreThreadHolder(
-            self.target_dirpath,
-            self.PSDPathLineInput.text(),
-            self.target_width,
-            self.target_height,
-            self.target_file_type
-        )
-        self.workthread.progress_signal.connect(self.on_progress)
-        self.workthread.finish_signal.connect(self.on_complete)
-        self.workthread.start()
-
-    def stop(self, e):
-        if self.workthread:
-            self.workthread.cancellation_token.emit()
-        Thread(target=self.multi_image_write).start()
-        self.mainwin.close()
-
-    def on_progress(self, snapshot_path):
-        try:
-            size = self.PreviewLabel.size()
-            pixmap = QPixmap(snapshot_path)
-            self.PreviewLabel.setPixmap(
-                pixmap.scaled(size, Qt.KeepAspectRatio)
-            )
-        except e as Exception:
-            print(e)
-
-    def on_complete(self, e=None):
-        self.StartButton.setEnabled(True)
-        if self.workthread:
-            self.workthread = None
-
-    def multi_image_write(self):
+    def run(self):
         def sort_key(path):
             base = os.path.basename(path)
             basename = os.path.splitext(base)[0]
@@ -324,13 +204,17 @@ class WindowHandler(mainwindow.Ui_MainWindow):
                 return int(numbering)
             return -1
 
-        target_dir = self.build_target_path()
-        if not target_dir:
-            return
+        if not self.target_dir:
+            print("Invalid thread initialize: no target directory")
+            return self.finish_signal.emit()
 
         print("Preparing images..")
-        target_files = [f"{target_dir}/{x}" for x in os.listdir(target_dir)]
+        target_files = [f"{self.target_dir}/{x}" for x in os.listdir(self.target_dir)]
         target_files = list(filter(lambda x: x.endswith(f".{self.target_file_type}"), target_files))
+        if not target_files:
+            print("Quit thread: no target image found")
+            return self.finish_signal.emit()
+
         target_files.sort(key=sort_key)
         raw_imgs = [Image.open(target_file) for target_file in target_files]
         max_width = max([img.size[0] for img in raw_imgs])
@@ -381,23 +265,195 @@ class WindowHandler(mainwindow.Ui_MainWindow):
         target_files = [f"{paging_dir}/{x}" for x in os.listdir(paging_dir)]
         target_files = list(filter(lambda x: x.endswith(f".{self.target_file_type}"), target_files))
         target_files.sort(key=sort_key)
+
+        # append last frame
+        [target_files.append(target_files[-1]) for _ in range(20)]
         unified_imgs = [Image.open(target_file) for target_file in target_files]
         arrs = [np.asarray(img) for img in unified_imgs]
 
-        framerate_input = self.FrameRateLineEdit.text()
-        target_framerate = 8
-        if framerate_input.isdigit():
-            target_framerate = int(framerate_input)
-
         print("starting gif save..")
-        imageio.mimwrite(f"{target_dir}/dst.gif", arrs, fps=target_framerate, loop=0)
+        imageio.mimwrite(f"{self.target_dir}/dst.gif", arrs, fps=self.target_framerate, loop=0)
 
         print("Gif Done!")
-        imageio.mimwrite(f"{target_dir}/dst.mp4", arrs, fps=target_framerate)
+        imageio.mimwrite(f"{self.target_dir}/dst.mp4", arrs, fps=self.target_framerate)
         print("MP4 Done!")
 
         shutil.rmtree(paging_dir)
         print("Purge paging Done!")
+
+        return self.finish_signal.emit()
+
+
+class WindowHandler(mainwindow.Ui_MainWindow):
+
+    const = CONST()
+    workthread = None
+
+    @property
+    def target_file_type(self):
+        return self.FileTypeComboBox.currentText()
+
+    @property
+    def target_width(self):
+        width_input = self.SaveSizeWidthLineEdit.text()
+        if width_input.isdigit():
+            return min(int(width_input), 1024)
+        else:
+            return 0
+
+    @property
+    def target_height(self):
+        height_input = self.SaveSizeHeightLineEdit.text()
+        if height_input.isdigit():
+            return min(int(height_input), 720)
+        else:
+            return 0
+
+    @property
+    def is_autosave_enabled(self):
+        return self.AutoSaveCheckbox.isChecked()
+
+    @property
+    def is_closewhendone_enabled(self):
+        return self.CloseWhenDoneCheckbox.isChecked()
+
+    @property
+    def target_framerate(self):
+        input_txt = self.FrameRateLineEdit.text()
+        if input_txt.isdigit():
+            return int(input_txt)
+        else:
+            return 8
+
+    def __init__(self, mainwin):
+        super(WindowHandler, self).__init__()
+
+        self.mainwin = mainwin
+        self.mainwin.setWindowFlags(Qt.WindowStaysOnTopHint)
+
+        self.setupUi(self.mainwin)
+
+        self.PSDPathLineInput.setText(self.const.DEFAULT_PATH)
+        self.MakeDivisable16Button.clicked.connect(self.make_divisable_by_16)
+        self.ShowDirectoryButton.clicked.connect(self.showdir)
+        self.StartButton.clicked.connect(self.start)
+        self.StopButton.clicked.connect(self.stop)
+        self.PreviewLabel.setPixmap(QPixmap(""))
+        self.palette_handler = PaletteHandler(self.PaletteGrpView)
+
+        self.mainwin.setFocusPolicy(Qt.StrongFocus)
+        self.mainwin.keyPressEvent = self.keyPressEvent
+
+    def keyPressEvent(self, e):
+        if e.key() == Qt.Key_Enter:
+            mods = QtWidgets.QApplication.keyboardModifiers()
+            print(mods)
+            if mods == Qt.ShiftModifier:
+                print("BVDSVDS")
+            e.accept()
+
+    def make_divisable_by_16(self, e):
+        try:
+            psapp = client.Dispatch("Photoshop.Application").Application
+            if not psapp:
+                print("Photoshop is not running")
+                return
+
+            doc = psapp.ActiveDocument
+            if not doc:
+                print("No document is opened.")
+                return
+
+            width = doc.width
+            height = doc.height
+            target_width = int(width - (width % 16))
+            target_height = int(height - (height % 16))
+            doc.ResizeImage(target_width, target_height)
+
+        except Exception as e:
+            print(f"Error resizing: {e}")
+
+    def showdir(self, e=None):
+        target_psd_path = self.PSDPathLineInput.text()
+        target_dirpath = self.build_target_path()
+        if not target_dirpath:
+            return
+
+        if not os.path.isdir(target_dirpath):
+            os.makedirs(target_dirpath)
+
+        if platform.system() == "Windows":
+            os.startfile(target_dirpath)
+        elif platform.system() == "Darwin":
+            subprocess.Popen(["open", target_dirpath])
+        else:
+            subprocess.Popen(["xdg-open", target_dirpath])
+
+    def start(self, e=None):
+        target_psd_path = self.PSDPathLineInput.text()
+        if not target_psd_path:
+            print("Path not specified")
+            return
+
+        self.target_dirpath = self.build_target_path()
+        if not os.path.isdir(self.target_dirpath):
+            os.makedirs(self.target_dirpath)
+
+        self.StartButton.setEnabled(False)
+        self.FileTypeComboBox.setEnabled(False)
+        self.workthread = PSDStoreThreadHolder(
+            self.target_dirpath,
+            self.PSDPathLineInput.text(),
+            self.target_width,
+            self.target_height,
+            self.target_file_type
+        )
+        self.workthread.before_save_signal.connect(self.on_before_start)
+        self.workthread.progress_signal.connect(self.on_progress)
+        self.workthread.finish_signal.connect(self.on_complete)
+        self.workthread.start()
+
+    def stop(self, e=None):
+        # cancel running thread
+        if self.workthread:
+            self.workthread.cancellation_token.emit()
+
+        def on_save_complete():
+            if self.is_closewhendone_enabled:
+                self.mainwin.close()
+            else:
+                self.mainwin.setEnabled(True)
+            self.showdir()
+
+        self.mainwin.setEnabled(False)
+        self.mim_write_thread = MimRecThread(
+            self.build_target_path(),
+            self.target_file_type,
+            self.target_width,
+            self.target_height,
+            self.target_framerate
+        )
+        self.mim_write_thread.finish_signal.connect(on_save_complete)
+        self.mim_write_thread.start()
+
+    def on_progress(self, snapshot_path):
+        try:
+            size = self.PreviewLabel.size()
+            pixmap = QPixmap(snapshot_path)
+            self.PreviewLabel.setPixmap(
+                pixmap.scaled(size, Qt.KeepAspectRatio)
+            )
+        except e as Exception:
+            print(e)
+
+    def on_complete(self, e=None):
+        self.StartButton.setEnabled(True)
+        if self.workthread:
+            self.workthread = None
+
+    def on_before_start(self, e=None):
+        if self.is_autosave_enabled:
+            self.save_photoshop_doc()
 
     def build_target_path(self):
         target_psd_path = self.PSDPathLineInput.text()
@@ -405,11 +461,22 @@ class WindowHandler(mainwindow.Ui_MainWindow):
         target_filename = os.path.splitext(basename)[0]
         if not os.path.isfile(target_psd_path):
             if not os.path.isfile(target_psd_path + ".psd"):
-                print("[!] invalid target path")
+                print("Critical error: invalid target path")
                 return None
             else:
                 target_psd_path = target_psd_path + ".psd"
-        return f"{os.path.dirname(target_psd_path)}/{target_filename}/recorder"
+        result_path = f"{os.path.dirname(target_psd_path)}/{target_filename}/recorder".replace('\\', '/')
+        if not os.path.isdir(result_path):
+            os.makedirs(result_path)
+        return result_path
+
+    def save_photoshop_doc(self):
+        try:
+            psapp = client.Dispatch("Photoshop.Application").Application
+            doc = psapp.ActiveDocument
+            doc.save()
+        except:
+            return
 
 
 if __name__ == "__main__":

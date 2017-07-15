@@ -6,19 +6,19 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>283</width>
-    <height>430</height>
+    <width>369</width>
+    <height>507</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>MainWindow</string>
+   <string>PSDRecorder</string>
   </property>
   <widget class="QWidget" name="centralWidget">
    <layout class="QGridLayout" name="gridLayout">
-    <item row="8" column="0">
-     <widget class="QLineEdit" name="FrameRateLineEdit">
-      <property name="placeholderText">
-       <string>Framerate</string>
+    <item row="3" column="1">
+     <widget class="QPushButton" name="ShowDirectoryButton">
+      <property name="text">
+       <string>Explore Directory</string>
       </property>
      </widget>
     </item>
@@ -29,24 +29,10 @@
       </property>
      </widget>
     </item>
-    <item row="3" column="1">
-     <widget class="QPushButton" name="ShowDirectoryButton">
-      <property name="text">
-       <string>Explore Directory</string>
-      </property>
-     </widget>
-    </item>
-    <item row="6" column="1">
-     <widget class="QPushButton" name="StartButton">
-      <property name="text">
-       <string>Start</string>
-      </property>
-     </widget>
-    </item>
-    <item row="5" column="1">
-     <widget class="QLineEdit" name="SaveSizeHeightLineEdit">
+    <item row="10" column="0">
+     <widget class="QLineEdit" name="FrameRateLineEdit">
       <property name="placeholderText">
-       <string>Height</string>
+       <string>Framerate</string>
       </property>
      </widget>
     </item>
@@ -57,13 +43,6 @@
       </property>
      </widget>
     </item>
-    <item row="8" column="1">
-     <widget class="QPushButton" name="StopButton">
-      <property name="text">
-       <string>Encode GIF/MP4</string>
-      </property>
-     </widget>
-    </item>
     <item row="1" column="0" colspan="2">
      <widget class="QLineEdit" name="PSDPathLineInput">
       <property name="placeholderText">
@@ -71,17 +50,24 @@
       </property>
      </widget>
     </item>
-    <item row="0" column="0" colspan="2">
-     <widget class="QLabel" name="PreviewLabel">
+    <item row="10" column="1">
+     <widget class="QPushButton" name="StopButton">
       <property name="text">
-       <string>[Preview Here]</string>
+       <string>Stop/Encode GIF/MP4</string>
       </property>
-      <property name="alignment">
-       <set>Qt::AlignCenter</set>
+      <property name="shortcut">
+       <string>Esc</string>
       </property>
      </widget>
     </item>
-    <item row="6" column="0">
+    <item row="5" column="1">
+     <widget class="QLineEdit" name="SaveSizeHeightLineEdit">
+      <property name="placeholderText">
+       <string>Height</string>
+      </property>
+     </widget>
+    </item>
+    <item row="7" column="0">
      <widget class="QComboBox" name="FileTypeComboBox">
       <item>
        <property name="text">
@@ -95,6 +81,107 @@
       </item>
      </widget>
     </item>
+    <item row="7" column="1">
+     <widget class="QPushButton" name="StartButton">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
+      <property name="font">
+       <font>
+        <weight>75</weight>
+        <bold>true</bold>
+       </font>
+      </property>
+      <property name="text">
+       <string>Record</string>
+      </property>
+      <property name="shortcut">
+       <string>Return</string>
+      </property>
+     </widget>
+    </item>
+    <item row="0" column="0" colspan="2">
+     <widget class="QTabWidget" name="tabWidget">
+      <property name="enabled">
+       <bool>true</bool>
+      </property>
+      <property name="currentIndex">
+       <number>0</number>
+      </property>
+      <widget class="QWidget" name="tab">
+       <attribute name="title">
+        <string>Preview</string>
+       </attribute>
+       <layout class="QHBoxLayout" name="horizontalLayout_2">
+        <item>
+         <widget class="QLabel" name="PreviewLabel">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="text">
+           <string>[Preview Here]</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="tab_2">
+       <attribute name="title">
+        <string>Work in progress</string>
+       </attribute>
+       <layout class="QHBoxLayout" name="horizontalLayout_3">
+        <item>
+         <widget class="QGraphicsView" name="PaletteGrpView">
+          <property name="verticalScrollBarPolicy">
+           <enum>Qt::ScrollBarAlwaysOff</enum>
+          </property>
+          <property name="horizontalScrollBarPolicy">
+           <enum>Qt::ScrollBarAlwaysOff</enum>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </widget>
+    </item>
+    <item row="6" column="0">
+     <widget class="QCheckBox" name="AutoSaveCheckbox">
+      <property name="text">
+       <string>Auto Save Photoshop</string>
+      </property>
+      <property name="shortcut">
+       <string>S</string>
+      </property>
+      <property name="checked">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </item>
+    <item row="6" column="1">
+     <widget class="QCheckBox" name="CloseWhenDoneCheckbox">
+      <property name="text">
+       <string>Close when done</string>
+      </property>
+      <property name="shortcut">
+       <string>S</string>
+      </property>
+      <property name="checked">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </item>
    </layout>
   </widget>
  </widget>
@@ -102,13 +189,8 @@
  <tabstops>
   <tabstop>PSDPathLineInput</tabstop>
   <tabstop>MakeDivisable16Button</tabstop>
-  <tabstop>ShowDirectoryButton</tabstop>
   <tabstop>SaveSizeWidthLineEdit</tabstop>
-  <tabstop>SaveSizeHeightLineEdit</tabstop>
-  <tabstop>FileTypeComboBox</tabstop>
-  <tabstop>StartButton</tabstop>
   <tabstop>FrameRateLineEdit</tabstop>
-  <tabstop>StopButton</tabstop>
  </tabstops>
  <resources/>
  <connections/>
