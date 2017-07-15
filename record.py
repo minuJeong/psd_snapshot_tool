@@ -329,7 +329,6 @@ class WindowHandler(mainwindow.Ui_MainWindow):
         super(WindowHandler, self).__init__()
 
         self.mainwin = mainwin
-        self.mainwin.setWindowFlags(Qt.WindowStaysOnTopHint)
 
         self.setupUi(self.mainwin)
 
@@ -343,6 +342,8 @@ class WindowHandler(mainwindow.Ui_MainWindow):
 
         self.mainwin.setFocusPolicy(Qt.StrongFocus)
         self.mainwin.keyPressEvent = self.keyPressEvent
+
+        self.mainwin.setWindowFlags(self.mainwin.windowFlags() | Qt.WindowStaysOnTopHint)
 
     def keyPressEvent(self, e):
         if e.key() == Qt.Key_Enter:

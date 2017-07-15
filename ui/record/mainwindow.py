@@ -100,7 +100,7 @@ class Ui_MainWindow(object):
         MainWindow.setCentralWidget(self.centralWidget)
 
         self.retranslateUi(MainWindow)
-        self.tabWidget.setCurrentIndex(0)
+        self.tabWidget.setCurrentIndex(1)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
         MainWindow.setTabOrder(self.PSDPathLineInput, self.MakeDivisable16Button)
         MainWindow.setTabOrder(self.MakeDivisable16Button, self.SaveSizeWidthLineEdit)
@@ -123,7 +123,7 @@ class Ui_MainWindow(object):
         self.StartButton.setShortcut(_translate("MainWindow", "Return"))
         self.PreviewLabel.setText(_translate("MainWindow", "[Preview Here]"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab), _translate("MainWindow", "Preview"))
-        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_2), _translate("MainWindow", "Work in progress"))
+        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_2), _translate("MainWindow", "Palette"))
         self.AutoSaveCheckbox.setText(_translate("MainWindow", "Auto Save Photoshop"))
         self.AutoSaveCheckbox.setShortcut(_translate("MainWindow", "S"))
         self.CloseWhenDoneCheckbox.setText(_translate("MainWindow", "Close when done"))
