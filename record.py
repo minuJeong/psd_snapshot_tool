@@ -239,15 +239,18 @@ class MimRecThread(QThread):
         count = len(raw_imgs)
         for i, img in enumerate(raw_imgs):
             print(f"Resizing: {i + 1} / {count}..")
+
+            # ignore if image already fits target size
+            if img.size[0] == target_width and img.size[1] == target_height:
+                img.save(f"{paging_dir}/unif_{i}.{self.target_file_type}")
+                continue
+
             resized_img = img
             if not target_ratio == 1.0:
                 resized_img = img.resize((target_width, target_height), Image.BICUBIC)
 
             if resized_img.size[0] == target_width and resized_img.size[1] == target_height:
                 resized_img.save(f"{paging_dir}/unif_{i}.{self.target_file_type}")
-
-                raw_imgs.remove(img)
-                del img
                 continue
 
             print("DIFFERENT SIZE!")
@@ -265,26 +268,30 @@ class MimRecThread(QThread):
         print("Serializing images..")
         target_files = [f"{paging_dir}/{x}" for x in os.listdir(paging_dir)]
         target_files = list(filter(lambda x: x.endswith(f".{self.target_file_type}"), target_files))
+        if not target_files:
+            print("no paging file found")
+            return self.finish_signal.emit()
         target_files.sort(key=sort_key)
+
+        def gen_mp4_callback():
+            self.finish_signal.emit()
 
         # append last frame
         [target_files.append(target_files[-1]) for _ in range(20)]
         unified_imgs = [Image.open(target_file) for target_file in target_files]
-        arrs = [np.asarray(img) for img in unified_imgs]
-
+        arrs = [np.array(img) for img in unified_imgs]
         shutil.rmtree(paging_dir)
 
         print("starting gif save..")
         imageio.mimwrite(f"{self.target_dir}/dst.gif", arrs, fps=self.target_framerate, loop=0)
         print("Gif Done!")
 
-        def gen_mp4_callback():
-            print("MP4 Done!")
-            self.finish_signal.emit()
-
-        gen_mp4_thread = GenMp4(arrs)
-        gen_mp4_thread.finish_signal.connect()
+        gen_mp4_thread = GenMp4(arrs, self.target_dir, self.target_framerate)
+        gen_mp4_thread.finish_signal.connect(gen_mp4_callback)
         gen_mp4_thread.start()
+
+        # prevent callback function is being garbage collected
+        gen_mp4_thread.wait()
 
 
 class WindowHandler(mainwindow.Ui_MainWindow):
@@ -321,6 +328,10 @@ class WindowHandler(mainwindow.Ui_MainWindow):
         return self.CloseWhenDoneCheckbox.isChecked()
 
     @property
+    def is_clearcache_enabled(self):
+        return self.ClearCacheCheckbox.isChecked()
+
+    @property
     def target_framerate(self):
         input_txt = self.FrameRateLineEdit.text()
         if input_txt.isdigit():
@@ -335,7 +346,7 @@ class WindowHandler(mainwindow.Ui_MainWindow):
 
         self.setupUi(self.mainwin)
 
-        self.PSDPathLineInput.setText(self.const.DEFAULT_PATH)
+        self.RefreshPSDirectoryButton.clicked.connect(self.refresh_psd_dirpath)
         self.MakeDivisable16Button.clicked.connect(self.make_divisable_by_16)
         self.ShowDirectoryButton.clicked.connect(self.showdir)
         self.StartButton.clicked.connect(self.start)
@@ -347,6 +358,7 @@ class WindowHandler(mainwindow.Ui_MainWindow):
         self.mainwin.keyPressEvent = self.keyPressEvent
 
         self.mainwin.setWindowFlags(self.mainwin.windowFlags() | Qt.WindowStaysOnTopHint)
+        self.refresh_psd_dirpath()
 
     def keyPressEvent(self, e):
         if e.key() == Qt.Key_Enter:
@@ -355,6 +367,9 @@ class WindowHandler(mainwindow.Ui_MainWindow):
             if mods == Qt.ShiftModifier:
                 print("BVDSVDS")
             e.accept()
+
+    def refresh_psd_dirpath(self, e=None):
+        self.PSDPathLineInput.setText(self.const.DEFAULT_PATH)
 
     def make_divisable_by_16(self, e):
         try:
@@ -424,16 +439,26 @@ class WindowHandler(mainwindow.Ui_MainWindow):
         if self.workthread:
             self.workthread.cancellation_token.emit()
 
+        target_dir = self.build_target_path()
+
         def on_save_complete():
+            print("multi image serialize process complete, purging..")
             if self.is_closewhendone_enabled:
                 self.mainwin.close()
             else:
                 self.mainwin.setEnabled(True)
+
+            if self.is_clearcache_enabled:
+                cache_files = [f"{target_dir}/{x}" for x in os.listdir(target_dir)]
+                cache_files = list(filter(lambda x: x.endswith(self.target_file_type), cache_files))
+                cache_files = list(filter(lambda x: "cached_" in os.path.basename(x), cache_files))
             self.showdir()
+
+            print("Purge done!")
 
         self.mainwin.setEnabled(False)
         self.mim_write_thread = MimRecThread(
-            self.build_target_path(),
+            target_dir,
             self.target_file_type,
             self.target_width,
             self.target_height,

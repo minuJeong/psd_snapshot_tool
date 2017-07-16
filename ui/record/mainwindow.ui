@@ -22,17 +22,17 @@
       </property>
      </widget>
     </item>
+    <item row="11" column="0">
+     <widget class="QLineEdit" name="FrameRateLineEdit">
+      <property name="placeholderText">
+       <string>Framerate</string>
+      </property>
+     </widget>
+    </item>
     <item row="3" column="0">
      <widget class="QPushButton" name="MakeDivisable16Button">
       <property name="text">
        <string>Resize d16</string>
-      </property>
-     </widget>
-    </item>
-    <item row="10" column="0">
-     <widget class="QLineEdit" name="FrameRateLineEdit">
-      <property name="placeholderText">
-       <string>Framerate</string>
       </property>
      </widget>
     </item>
@@ -43,14 +43,14 @@
       </property>
      </widget>
     </item>
-    <item row="1" column="0" colspan="2">
-     <widget class="QLineEdit" name="PSDPathLineInput">
+    <item row="5" column="1">
+     <widget class="QLineEdit" name="SaveSizeHeightLineEdit">
       <property name="placeholderText">
-       <string>Active PSD Path</string>
+       <string>Height</string>
       </property>
      </widget>
     </item>
-    <item row="10" column="1">
+    <item row="11" column="1">
      <widget class="QPushButton" name="StopButton">
       <property name="text">
        <string>Stop/Encode GIF/MP4</string>
@@ -60,14 +60,7 @@
       </property>
      </widget>
     </item>
-    <item row="5" column="1">
-     <widget class="QLineEdit" name="SaveSizeHeightLineEdit">
-      <property name="placeholderText">
-       <string>Height</string>
-      </property>
-     </widget>
-    </item>
-    <item row="7" column="0">
+    <item row="8" column="0">
      <widget class="QComboBox" name="FileTypeComboBox">
       <item>
        <property name="text">
@@ -81,7 +74,7 @@
       </item>
      </widget>
     </item>
-    <item row="7" column="1">
+    <item row="8" column="1">
      <widget class="QPushButton" name="StartButton">
       <property name="sizePolicy">
        <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
@@ -156,6 +149,19 @@
       </widget>
      </widget>
     </item>
+    <item row="6" column="1">
+     <widget class="QCheckBox" name="CloseWhenDoneCheckbox">
+      <property name="text">
+       <string>Close when done</string>
+      </property>
+      <property name="shortcut">
+       <string>S</string>
+      </property>
+      <property name="checked">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </item>
     <item row="6" column="0">
      <widget class="QCheckBox" name="AutoSaveCheckbox">
       <property name="text">
@@ -169,10 +175,28 @@
       </property>
      </widget>
     </item>
-    <item row="6" column="1">
-     <widget class="QCheckBox" name="CloseWhenDoneCheckbox">
+    <item row="2" column="0" colspan="2">
+     <layout class="QHBoxLayout" name="horizontalLayout">
+      <item>
+       <widget class="QLineEdit" name="PSDPathLineInput">
+        <property name="placeholderText">
+         <string>Active PSD Path</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="RefreshPSDirectoryButton">
+        <property name="text">
+         <string>&lt;- Photoshop</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item row="7" column="0">
+     <widget class="QCheckBox" name="ClearCacheCheckbox">
       <property name="text">
-       <string>Close when done</string>
+       <string>Clear Cache</string>
       </property>
       <property name="shortcut">
        <string>S</string>
@@ -187,7 +211,6 @@
  </widget>
  <layoutdefault spacing="6" margin="11"/>
  <tabstops>
-  <tabstop>PSDPathLineInput</tabstop>
   <tabstop>MakeDivisable16Button</tabstop>
   <tabstop>SaveSizeWidthLineEdit</tabstop>
   <tabstop>FrameRateLineEdit</tabstop>

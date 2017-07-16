@@ -5,14 +5,14 @@ import struct
 import numpy as np
 from scipy.ndimage import gaussian_filter
 
+import imageio
 from PIL import Image
 from pyaudio import PyAudio
 
 from PyQt5 import QtCore
 
 
-# class GenAudio(QtCore.QThread):
-class GenAudio(object):
+class GenAudio(QtCore.QThread):
 
     BITRATE = 16000
     FREQUENCY = 500
@@ -131,12 +131,17 @@ class GenMp4(QtCore.QThread):
         self.target_framerate = target_framerate
 
     def run(self):
-        audio_gen_thread = GenAudio(self.arrs)
-        audio_gen_thread.start()
+        # audio_gen_thread = GenAudio(self.arrs)
+        # audio_gen_thread.start()
+
+        print("starting MP4 save..")
         imageio.mimwrite(f"{self.target_dir}/dst.mp4", self.arrs, fps=self.target_framerate)
+        self.finish_signal.emit()
+
+        print("MP4 save done!")
 
 
-
+# DEBUG
 if __name__ == "__main__":
     import os
     path = "D:/Temp/Drawing/CUR/a344errdfrfss/recorder"

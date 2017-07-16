@@ -3,7 +3,6 @@ import random
 import math
 
 from win32com import client
-from win32gui
 
 from PyQt5 import QtWidgets
 from PyQt5 import QtGui
