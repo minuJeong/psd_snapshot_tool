@@ -3,6 +3,7 @@ import random
 import math
 
 from win32com import client
+from win32gui
 
 from PyQt5 import QtWidgets
 from PyQt5 import QtGui
@@ -34,6 +35,10 @@ class PaletteHandler(object):
         self.palette_view.tabletEvent = self.tablet_event
 
     def paint_color(self, pos, color=None):
+        """
+        TODO: blurry brush
+        """
+
         radius = self.BRUSH_RADIUS
         rect = QtCore.QRectF(
             pos.x() - radius,
@@ -124,7 +129,6 @@ class PaletteHandler(object):
         if QtCore.Qt.LeftButton in self.pressed_mouse_buttons:
             self.paint_color(e.pos())
             self.static_stage()
-            self.paint_intense = 1.0
 
     def mouse_release(self, e=None):
         if QtCore.Qt.RightButton in self.pressed_mouse_buttons:
@@ -159,14 +163,9 @@ class PaletteHandler(object):
             color = QtGui.QColor(r, g, b)
             self.paint_color(pos, color)
             self.static_stage()
-            self.paint_intense *= self.BRUSH_DECAY
 
         if QtCore.Qt.RightButton in self.pressed_mouse_buttons:
             self.set_ps_foreground_color(self.get_stage_color(e.pos()))
 
     def tablet_event(self, e=None):
-        """
-        TODO
-        """
-
         self.paint_intense = e.pressure()

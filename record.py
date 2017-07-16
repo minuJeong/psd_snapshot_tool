@@ -37,6 +37,7 @@ from win32com import client
 
 from ui.record import mainwindow
 from palette_handler import PaletteHandler
+from gen_audio import GenMp4
 
 
 class CONST(object):
@@ -271,17 +272,19 @@ class MimRecThread(QThread):
         unified_imgs = [Image.open(target_file) for target_file in target_files]
         arrs = [np.asarray(img) for img in unified_imgs]
 
+        shutil.rmtree(paging_dir)
+
         print("starting gif save..")
         imageio.mimwrite(f"{self.target_dir}/dst.gif", arrs, fps=self.target_framerate, loop=0)
-
         print("Gif Done!")
-        imageio.mimwrite(f"{self.target_dir}/dst.mp4", arrs, fps=self.target_framerate)
-        print("MP4 Done!")
 
-        shutil.rmtree(paging_dir)
-        print("Purge paging Done!")
+        def gen_mp4_callback():
+            print("MP4 Done!")
+            self.finish_signal.emit()
 
-        return self.finish_signal.emit()
+        gen_mp4_thread = GenMp4(arrs)
+        gen_mp4_thread.finish_signal.connect()
+        gen_mp4_thread.start()
 
 
 class WindowHandler(mainwindow.Ui_MainWindow):
@@ -413,6 +416,8 @@ class WindowHandler(mainwindow.Ui_MainWindow):
         self.workthread.progress_signal.connect(self.on_progress)
         self.workthread.finish_signal.connect(self.on_complete)
         self.workthread.start()
+
+        self.mainwin.setWindowFlags(self.mainwin.windowFlags() | Qt.WindowStaysOnTopHint)
 
     def stop(self, e=None):
         # cancel running thread

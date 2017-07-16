@@ -17,6 +17,7 @@ addtional_mods = ['numpy.core._methods', 'numpy.lib.format']
 setup(
     name="Recorder",
     version="0.0.2",
+    package_data={'': ["ffmpeg.exe"]},
     options={'build_exe': {'includes': addtional_mods}},
     executables=[Executable("record.py")]
 )
