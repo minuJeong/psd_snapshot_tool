@@ -1,5 +1,5 @@
 
-import wave
+import time
 from threading import Thread
 
 import pyaudio
@@ -18,6 +18,7 @@ class Recorder(QtGui.QWidget):
     RATE = 44100
 
     is_recording = False
+    is_record_thread_running = False
     frames = None
 
     def __init__(self):
@@ -49,7 +50,7 @@ class Recorder(QtGui.QWidget):
         self.record_button.mouseReleaseEvent = self.stop_record
 
         self.play_button.clicked.connect(self.play_last)
-        self.save_button.clicked.connect(self.save)
+        self.save_button.clicked.connect(self.save_as_file)
 
     def start_record(self, e=None):
         self.is_recording = True
@@ -74,7 +75,32 @@ class Recorder(QtGui.QWidget):
         for data in self.frames:
             output_stream.write(data)
 
+    def save_as_file(self, e=None):
+        self.save().save("save.png")
+
+    def send_to_ps(self):
+        # wait for thread complete
+        while self.is_record_thread_running:
+            time.sleep(0.1)
+
+        print("Sending image to photoshop..")
+
+        img = self.save()
+        ps = client.Dispatch("Photoshop.Application")
+        app = ps.Application
+
+        doc = None
+        try:
+            doc = app.ActiveDocument
+        except:
+            pass
+
+        doc = app.documents.add(img.size[0], img.size[1], 72, "docRef", "RGB")
+        print(doc)
+
     def record(self):
+        self.is_record_thread_running = True
+
         audio_input = pyaudio.PyAudio()
         input_stream = audio_input.open(
             format=self.FORMAT,
@@ -93,20 +119,11 @@ class Recorder(QtGui.QWidget):
         input_stream.stop_stream()
         audio_input.terminate()
 
-    def save(self, e=None):
+        self.is_record_thread_running = False
+
+    def save(self):
         if not self.frames:
-            return
-
-        OUTPUT_FILE = "save.wav"
-        sample_width = pyaudio.PyAudio().get_sample_size(self.FORMAT)
-
-        wave_file = wave.open(OUTPUT_FILE, 'wb')
-        wave_file.setnchannels(self.CHANNELS)
-        wave_file.setsampwidth(sample_width)
-        wave_file.setframerate(self.RATE)
-        wave_file.writeframes(b''.join(self.frames))
-        wave_file.close()
-        print("Saved wave")
+            return Image.new("L", (1, 1), (0,))
 
         frame_count = len(self.frames)
         unit = len(self.frames[0])
@@ -126,8 +143,9 @@ class Recorder(QtGui.QWidget):
                 for y in range(h):
                     value = frame[x + (y * w)]
                     px[x + x_offset, y + y_offset] = (value,)
-        img.save("save.png")
         print("Generated image")
+
+        return img
 
 if __name__ == "__main__":
     app = QtGui.QApplication([])
