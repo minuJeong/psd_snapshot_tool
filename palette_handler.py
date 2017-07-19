@@ -11,7 +11,7 @@ from PyQt5 import QtCore
 
 class PaletteHandler(object):
 
-    BRUSH_RADIUS = 20.0
+    BRUSH_RADIUS = 10.0
     BRUSH_DECAY = 0.88
 
     pressed_mouse_buttons = []
@@ -22,6 +22,7 @@ class PaletteHandler(object):
     # reset every mouse release
     painting_items = []
     paint_intense = 0.0
+    last_pos = (0, 0)
 
     def __init__(self, target_view):
         self.palette_view = target_view
@@ -39,24 +40,38 @@ class PaletteHandler(object):
         """
 
         radius = self.BRUSH_RADIUS
-        rect = QtCore.QRectF(
-            pos.x() - radius,
-            pos.y() - radius,
-            radius * 2.0,
-            radius * 2.0
-        )
 
-        if not color:
-            color = self.get_ps_foreground_color()
+        color = self.get_ps_foreground_color()
+        color.setAlpha(self.paint_intense * 255)
         brush = QtGui.QBrush(color)
 
-        self.painting_items.append(
-            self.stage.addEllipse(
-                rect,
-                pen=QtGui.QPen(brush, 0.0),
-                brush=brush
+        lx = self.last_pos.x()
+        ly = self.last_pos.y()
+        cx = pos.x()
+        cy = pos.y()
+        dx = cx - lx
+        dy = cy - ly
+        count = 2 + int((abs(dx) + abs(dy)) * 0.1)
+
+        for i in range(count):
+            prog = float(i) / count
+
+            tx = lx + dx * prog
+            ty = ly + dy * prog
+
+            rect = QtCore.QRectF(
+                tx - radius,
+                ty - radius,
+                radius * 2.0,
+                radius * 2.0
             )
-        )
+            self.painting_items.append(
+                self.stage.addEllipse(
+                    rect,
+                    pen=QtGui.QPen(brush, 0.0),
+                    brush=brush
+                )
+            )
 
     def static_stage(self):
         self.stage.setSceneRect(
@@ -126,8 +141,13 @@ class PaletteHandler(object):
         self.painting_items = []
 
         if QtCore.Qt.LeftButton in self.pressed_mouse_buttons:
-            self.paint_color(e.pos())
+            pos = e.pos()
+            self.last_pos = pos
+            self.paint_color(pos)
             self.static_stage()
+
+        if QtCore.Qt.RightButton in self.pressed_mouse_buttons:
+            self.set_ps_foreground_color(self.get_stage_color(e.pos()))
 
     def mouse_release(self, e=None):
         if QtCore.Qt.RightButton in self.pressed_mouse_buttons:
@@ -146,22 +166,9 @@ class PaletteHandler(object):
     def mouse_move(self, e=None):
         pos = e.pos()
         if QtCore.Qt.LeftButton in self.pressed_mouse_buttons:
-            ps_color = self.get_ps_foreground_color()
-            stage_color = self.get_stage_color(pos, self.BRUSH_RADIUS)
-            r = (ps_color.red() * self.paint_intense +
-                 stage_color.red() * (1.0 - self.paint_intense))
-            g = (ps_color.green() * self.paint_intense +
-                 stage_color.green() * (1.0 - self.paint_intense))
-            b = (ps_color.blue() * self.paint_intense +
-                 stage_color.blue() * (1.0 - self.paint_intense))
-
-            r = min(max(r, 0), 255)
-            g = min(max(g, 0), 255)
-            b = min(max(b, 0), 255)
-
-            color = QtGui.QColor(r, g, b)
-            self.paint_color(pos, color)
+            self.paint_color(pos)
             self.static_stage()
+            self.last_pos = pos
 
         if QtCore.Qt.RightButton in self.pressed_mouse_buttons:
             self.set_ps_foreground_color(self.get_stage_color(e.pos()))

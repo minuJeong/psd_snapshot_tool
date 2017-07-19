@@ -37,7 +37,7 @@ from win32com import client
 
 from ui.record import mainwindow
 from palette_handler import PaletteHandler
-from gen_audio import GenMp4
+from gen_mp4 import GenMp4
 
 
 class CONST(object):
@@ -273,9 +273,6 @@ class MimRecThread(QThread):
             return self.finish_signal.emit()
         target_files.sort(key=sort_key)
 
-        def gen_mp4_callback():
-            self.finish_signal.emit()
-
         # append last frame
         [target_files.append(target_files[-1]) for _ in range(20)]
         unified_imgs = [Image.open(target_file) for target_file in target_files]
@@ -287,11 +284,11 @@ class MimRecThread(QThread):
         print("Gif Done!")
 
         gen_mp4_thread = GenMp4(arrs, self.target_dir, self.target_framerate)
-        gen_mp4_thread.finish_signal.connect(gen_mp4_callback)
+        gen_mp4_thread.finish_signal.connect(self.gen_mp4_callback)
         gen_mp4_thread.start()
 
-        # prevent callback function is being garbage collected
-        gen_mp4_thread.wait()
+    def gen_mp4_callback(self):
+        self.finish_signal.emit()
 
 
 class WindowHandler(mainwindow.Ui_MainWindow):
