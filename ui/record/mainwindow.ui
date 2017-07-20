@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>369</width>
-    <height>507</height>
+    <width>346</width>
+    <height>537</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -15,6 +15,13 @@
   </property>
   <widget class="QWidget" name="centralWidget">
    <layout class="QGridLayout" name="gridLayout">
+    <item row="5" column="0">
+     <widget class="QLineEdit" name="SaveSizeWidthLineEdit">
+      <property name="placeholderText">
+       <string>WIdth</string>
+      </property>
+     </widget>
+    </item>
     <item row="3" column="1">
      <widget class="QPushButton" name="ShowDirectoryButton">
       <property name="text">
@@ -22,7 +29,24 @@
       </property>
      </widget>
     </item>
-    <item row="11" column="0">
+    <item row="5" column="1">
+     <widget class="QLineEdit" name="SaveSizeHeightLineEdit">
+      <property name="placeholderText">
+       <string>Height</string>
+      </property>
+     </widget>
+    </item>
+    <item row="10" column="1">
+     <widget class="QPushButton" name="StopButton">
+      <property name="text">
+       <string>Stop/Encode GIF/MP4</string>
+      </property>
+      <property name="shortcut">
+       <string>Esc</string>
+      </property>
+     </widget>
+    </item>
+    <item row="10" column="0">
      <widget class="QLineEdit" name="FrameRateLineEdit">
       <property name="placeholderText">
        <string>Framerate</string>
@@ -36,45 +60,7 @@
       </property>
      </widget>
     </item>
-    <item row="5" column="0">
-     <widget class="QLineEdit" name="SaveSizeWidthLineEdit">
-      <property name="placeholderText">
-       <string>WIdth</string>
-      </property>
-     </widget>
-    </item>
-    <item row="5" column="1">
-     <widget class="QLineEdit" name="SaveSizeHeightLineEdit">
-      <property name="placeholderText">
-       <string>Height</string>
-      </property>
-     </widget>
-    </item>
-    <item row="11" column="1">
-     <widget class="QPushButton" name="StopButton">
-      <property name="text">
-       <string>Stop/Encode GIF/MP4</string>
-      </property>
-      <property name="shortcut">
-       <string>Esc</string>
-      </property>
-     </widget>
-    </item>
-    <item row="8" column="0">
-     <widget class="QComboBox" name="FileTypeComboBox">
-      <item>
-       <property name="text">
-        <string>jpg</string>
-       </property>
-      </item>
-      <item>
-       <property name="text">
-        <string>png</string>
-       </property>
-      </item>
-     </widget>
-    </item>
-    <item row="8" column="1">
+    <item row="7" column="1">
      <widget class="QPushButton" name="StartButton">
       <property name="sizePolicy">
        <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
@@ -96,13 +82,40 @@
       </property>
      </widget>
     </item>
+    <item row="7" column="0">
+     <widget class="QComboBox" name="FileTypeComboBox">
+      <item>
+       <property name="text">
+        <string>jpg</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>png</string>
+       </property>
+      </item>
+     </widget>
+    </item>
+    <item row="6" column="1">
+     <widget class="QCheckBox" name="AlwaysOnTopCheckbox">
+      <property name="text">
+       <string>Always on top</string>
+      </property>
+      <property name="shortcut">
+       <string>Ctrl+S</string>
+      </property>
+      <property name="checked">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </item>
     <item row="0" column="0" colspan="2">
      <widget class="QTabWidget" name="tabWidget">
       <property name="enabled">
        <bool>true</bool>
       </property>
       <property name="currentIndex">
-       <number>1</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="tab">
        <attribute name="title">
@@ -127,39 +140,6 @@
         </item>
        </layout>
       </widget>
-      <widget class="QWidget" name="tab_2">
-       <attribute name="title">
-        <string>Palette</string>
-       </attribute>
-       <layout class="QHBoxLayout" name="horizontalLayout_3">
-        <item>
-         <widget class="QGraphicsView" name="PaletteGrpView">
-          <property name="verticalScrollBarPolicy">
-           <enum>Qt::ScrollBarAlwaysOff</enum>
-          </property>
-          <property name="horizontalScrollBarPolicy">
-           <enum>Qt::ScrollBarAlwaysOff</enum>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </widget>
-     </widget>
-    </item>
-    <item row="6" column="1">
-     <widget class="QCheckBox" name="CloseWhenDoneCheckbox">
-      <property name="text">
-       <string>Close when done</string>
-      </property>
-      <property name="shortcut">
-       <string>S</string>
-      </property>
-      <property name="checked">
-       <bool>true</bool>
-      </property>
      </widget>
     </item>
     <item row="6" column="0">
@@ -192,19 +172,6 @@
        </widget>
       </item>
      </layout>
-    </item>
-    <item row="7" column="0">
-     <widget class="QCheckBox" name="ClearCacheCheckbox">
-      <property name="text">
-       <string>Clear Cache</string>
-      </property>
-      <property name="shortcut">
-       <string>S</string>
-      </property>
-      <property name="checked">
-       <bool>true</bool>
-      </property>
-     </widget>
     </item>
    </layout>
   </widget>

@@ -25,5 +25,5 @@ class GenMp4(QThread):
     def run(self):
         print("starting MP4 save..")
         imageio.mimwrite(f"{self.target_dir}/dst.mp4", self.arrs, fps=self.target_framerate)
-        self.finish_signal.emit()
         print("MP4 save done!")
+        self.finish_signal.emit()

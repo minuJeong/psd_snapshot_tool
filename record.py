@@ -120,7 +120,7 @@ class PSDStoreThreadHolder(QThread):
     target_width = 0
     target_height = 0
 
-    index = 456
+    index = 0
 
     cancellation_token = Signal()
     before_save_signal= Signal()
@@ -281,15 +281,15 @@ class MimRecThread(QThread):
         imageio.mimwrite(f"{self.target_dir}/dst.gif", arrs, fps=self.target_framerate, loop=0)
         print("Gif Done!")
 
-        gen_mp4_thread = GenMp4(arrs, self.target_dir, self.target_framerate)
-        gen_mp4_thread.finish_signal.connect(self.gen_mp4_callback)
-        gen_mp4_thread.start()
+        self.gen_mp4_thread = GenMp4(arrs, self.target_dir, self.target_framerate)
+        self.gen_mp4_thread.finish_signal.connect(self.on_gen_mp4_finish)
+        self.gen_mp4_thread.start()
 
-    def gen_mp4_callback(self):
+    def on_gen_mp4_finish(self):
         self.finish_signal.emit()
 
 
-class WindowHandler(mainwindow.Ui_MainWindow):
+class WindowHandler(QtGui.QMainWindow, mainwindow.Ui_MainWindow):
 
     const = CONST()
     workthread = None
@@ -319,27 +319,17 @@ class WindowHandler(mainwindow.Ui_MainWindow):
         return self.AutoSaveCheckbox.isChecked()
 
     @property
-    def is_closewhendone_enabled(self):
-        return self.CloseWhenDoneCheckbox.isChecked()
-
-    @property
-    def is_clearcache_enabled(self):
-        return self.ClearCacheCheckbox.isChecked()
-
-    @property
     def target_framerate(self):
         input_txt = self.FrameRateLineEdit.text()
         if input_txt.isdigit():
             return int(input_txt)
         else:
-            return 8
+            return 12
 
-    def __init__(self, mainwin):
+    def __init__(self):
         super(WindowHandler, self).__init__()
 
-        self.mainwin = mainwin
-
-        self.setupUi(self.mainwin)
+        self.setupUi(self)
 
         self.RefreshPSDirectoryButton.clicked.connect(self.refresh_psd_dirpath)
         self.MakeDivisable16Button.clicked.connect(self.make_divisable_by_16)
@@ -347,21 +337,15 @@ class WindowHandler(mainwindow.Ui_MainWindow):
         self.StartButton.clicked.connect(self.start)
         self.StopButton.clicked.connect(self.stop)
         self.PreviewLabel.setPixmap(QtGui.QPixmap(""))
-        self.palette_handler = PaletteHandler(self.PaletteGrpView)
 
-        self.mainwin.setFocusPolicy(Qt.StrongFocus)
-        self.mainwin.keyPressEvent = self.keyPressEvent
-
-        self.mainwin.setWindowFlags(self.mainwin.windowFlags() | Qt.WindowStaysOnTopHint)
+        self.setWindowFlags(Qt.WindowStaysOnTopHint)
         self.refresh_psd_dirpath()
 
-    def keyPressEvent(self, e):
-        if e.key() == Qt.Key_Enter:
-            mods = QtWidgets.QApplication.keyboardModifiers()
-            print(mods)
-            if mods == Qt.ShiftModifier:
-                print("BVDSVDS")
-            e.accept()
+        self.AlwaysOnTopCheckbox.stateChanged.connect(self.always_on_top_state_changed)
+
+    def always_on_top_state_changed(self, state):
+        self.setWindowFlags(self.windowFlags() ^ Qt.WindowStaysOnTopHint)
+        self.show()
 
     def refresh_psd_dirpath(self, e=None):
         self.PSDPathLineInput.setText(self.const.DEFAULT_PATH)
@@ -427,8 +411,6 @@ class WindowHandler(mainwindow.Ui_MainWindow):
         self.workthread.finish_signal.connect(self.on_complete)
         self.workthread.start()
 
-        self.mainwin.setWindowFlags(self.mainwin.windowFlags() | Qt.WindowStaysOnTopHint)
-
     def stop(self, e=None):
         # cancel running thread
         if self.workthread:
@@ -436,23 +418,7 @@ class WindowHandler(mainwindow.Ui_MainWindow):
 
         target_dir = self.build_target_path()
 
-        def on_save_complete():
-            print("multi image serialize process complete, purging..")
-
-            if self.is_clearcache_enabled:
-                cache_files = [f"{target_dir}/{x}" for x in os.listdir(target_dir)]
-                cache_files = list(filter(lambda x: x.endswith(self.target_file_type), cache_files))
-                cache_files = list(filter(lambda x: "cached_" in os.path.basename(x), cache_files))
-            self.showdir()
-
-            if self.is_closewhendone_enabled:
-                self.mainwin.close()
-            else:
-                self.mainwin.setEnabled(True)
-
-            print("Purge done!")
-
-        self.mainwin.setEnabled(False)
+        self.setEnabled(False)
         self.mim_write_thread = MimRecThread(
             target_dir,
             self.target_file_type,
@@ -460,8 +426,13 @@ class WindowHandler(mainwindow.Ui_MainWindow):
             self.target_height,
             self.target_framerate
         )
-        self.mim_write_thread.finish_signal.connect(on_save_complete)
+        self.mim_write_thread.finish_signal.connect(self.on_save_complete)
         self.mim_write_thread.start()
+
+    def on_save_complete(self):
+        print("multi image serialize process complete, purging..")
+        self.showdir()
+        self.setEnabled(True)
 
     def on_progress(self, snapshot_path):
         try:
@@ -508,7 +479,6 @@ class WindowHandler(mainwindow.Ui_MainWindow):
 
 if __name__ == "__main__":
     app = QtGui.QApplication([])
-    mainwin = QtGui.QMainWindow()
-    win = WindowHandler(mainwin)
+    mainwin = WindowHandler()
     mainwin.show()
     app.exec_()
