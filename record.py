@@ -26,12 +26,10 @@ import imageio
 from psd_tools import PSDImage
 from PIL import Image
 
-from PyQt5 import QtWidgets
-from PyQt5.QtCore import QThread
-from PyQt5.QtCore import pyqtSignal
-from PyQt5.Qt import Qt
-from PyQt5.QtGui import QIntValidator
-from PyQt5.QtGui import QPixmap
+from PySide import QtGui
+from PySide.QtCore import QThread
+from PySide.QtCore import Signal
+from PySide.QtCore import Qt
 
 from win32com import client
 
@@ -58,7 +56,7 @@ class PSDStoreThread(QThread):
     hashlock = None
     last_hash = None
 
-    save_success_signal = pyqtSignal(str)
+    save_success_signal = Signal(str)
 
     def __init__(self, psd_path, png_path, override_size, hashlock, last_hash):
         super(PSDStoreThread, self).__init__()
@@ -124,10 +122,10 @@ class PSDStoreThreadHolder(QThread):
 
     index = 456
 
-    cancellation_token = pyqtSignal()
-    before_save_signal= pyqtSignal()
-    progress_signal = pyqtSignal(str)
-    finish_signal = pyqtSignal()
+    cancellation_token = Signal()
+    before_save_signal= Signal()
+    progress_signal = Signal(str)
+    finish_signal = Signal()
 
     cancellation_token_flipped = False
 
@@ -186,7 +184,7 @@ class PSDStoreThreadHolder(QThread):
 
 class MimRecThread(QThread):
 
-    finish_signal = pyqtSignal()
+    finish_signal = Signal()
 
     def __init__(self, target_dir, target_file_type, target_width, target_height, target_framerate):
         super(MimRecThread, self).__init__()
@@ -348,7 +346,7 @@ class WindowHandler(mainwindow.Ui_MainWindow):
         self.ShowDirectoryButton.clicked.connect(self.showdir)
         self.StartButton.clicked.connect(self.start)
         self.StopButton.clicked.connect(self.stop)
-        self.PreviewLabel.setPixmap(QPixmap(""))
+        self.PreviewLabel.setPixmap(QtGui.QPixmap(""))
         self.palette_handler = PaletteHandler(self.PaletteGrpView)
 
         self.mainwin.setFocusPolicy(Qt.StrongFocus)
@@ -467,7 +465,7 @@ class WindowHandler(mainwindow.Ui_MainWindow):
     def on_progress(self, snapshot_path):
         try:
             size = self.PreviewLabel.size()
-            pixmap = QPixmap(snapshot_path)
+            pixmap = QtGui.QPixmap(snapshot_path)
             self.PreviewLabel.setPixmap(
                 pixmap.scaled(size, Qt.KeepAspectRatio)
             )
@@ -508,8 +506,8 @@ class WindowHandler(mainwindow.Ui_MainWindow):
 
 
 if __name__ == "__main__":
-    app = QtWidgets.QApplication([])
-    mainwin = QtWidgets.QMainWindow()
+    app = QtGui.QApplication([])
+    mainwin = QtGui.QMainWindow()
     win = WindowHandler(mainwin)
     mainwin.show()
-    app.exec()
+    app.exec_()

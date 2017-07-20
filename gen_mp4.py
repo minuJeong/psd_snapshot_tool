@@ -4,12 +4,13 @@ import numpy as np
 import imageio
 from PIL import Image
 
-from PyQt5 import QtCore
+from PySide.QtCore import Signal
+from PySide.QtCore import QThread
 
 
-class GenMp4(QtCore.QThread):
+class GenMp4(QThread):
 
-    finish_signal = QtCore.pyqtSignal()
+    finish_signal = Signal()
 
     arrs = None
     target_dir = None

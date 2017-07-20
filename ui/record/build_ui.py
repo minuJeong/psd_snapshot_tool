@@ -12,10 +12,7 @@ author: Minu Jeong
 import sys
 import os
 
-if sys.version[0] == '3':
-    from PyQt5 import uic
-else:
-    from PyQt4 import uic
+import pysideuic
 
 
 def run():
@@ -48,11 +45,8 @@ def run():
                     src_path
                 ))
 
-    # build ui files
-    uic.compileUiDir(
-        os.path.dirname(__file__),
-        recurse=True
-    )
+    target_dir = os.path.dirname(__file__).replace("\\", '/')
+    pysideuic.compileUiDir(target_dir)
 
 if __name__ == "__main__":
     run()

@@ -4,9 +4,8 @@ import math
 
 from win32com import client
 
-from PyQt5 import QtWidgets
-from PyQt5 import QtGui
-from PyQt5 import QtCore
+from PySide import QtGui
+from PySide import QtCore
 
 
 class PaletteHandler(object):
@@ -27,7 +26,7 @@ class PaletteHandler(object):
     def __init__(self, target_view):
         self.palette_view = target_view
 
-        self.stage = QtWidgets.QGraphicsScene()
+        self.stage = QtGui.QGraphicsScene()
         self.palette_view.setScene(self.stage)
         self.palette_view.mousePressEvent = self.mouse_press
         self.palette_view.mouseMoveEvent = self.mouse_move
