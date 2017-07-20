@@ -12,3 +12,4 @@ data.txt
 *.mp3
 .DEBUG/
 *.wav
+PySide/
