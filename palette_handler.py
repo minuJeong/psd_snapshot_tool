@@ -6,6 +6,7 @@ from win32com import client
 
 from PySide import QtGui
 from PySide import QtCore
+from PySide.QtCore import Qt
 
 
 class PaletteHandler(object):
@@ -32,14 +33,10 @@ class PaletteHandler(object):
         self.palette_view.mouseMoveEvent = self.mouse_move
         self.palette_view.mouseReleaseEvent = self.mouse_release
         self.palette_view.tabletEvent = self.tablet_event
+        self.palette_view.setMouseTracking(True)
 
     def paint_color(self, pos, color=None):
-        """
-        TODO: blurry brush
-        """
-
         radius = self.BRUSH_RADIUS
-
         color = self.get_ps_foreground_color()
         color.setAlpha(self.paint_intense * 255)
         brush = QtGui.QBrush(color)
@@ -156,10 +153,15 @@ class PaletteHandler(object):
             self.pressed_mouse_buttons.remove(e.button())
 
         # flatten view as bitmap
-        image = self.palette_view.grab()
+        pixmap = QtGui.QPixmap()
+        w = pixmap.width()
+        h = pixmap.height()
+        self.palette_view.render(
+            QtGui.QPainter(pixmap), QtCore.QRectF(-1, -1, w, h), pixmap.rect(), Qt.KeepAspectRatio
+        )
         for item in self.painting_items:
             self.stage.removeItem(item)
-        flattened_img = self.stage.addPixmap(image)
+        flattened_img = self.stage.addPixmap(pixmap)
         flattened_img.setPos(-1, -1)
 
     def mouse_move(self, e=None):
@@ -174,3 +176,5 @@ class PaletteHandler(object):
 
     def tablet_event(self, e=None):
         self.paint_intense = e.pressure()
+
+        print("TABLET")

@@ -438,16 +438,17 @@ class WindowHandler(mainwindow.Ui_MainWindow):
 
         def on_save_complete():
             print("multi image serialize process complete, purging..")
-            if self.is_closewhendone_enabled:
-                self.mainwin.close()
-            else:
-                self.mainwin.setEnabled(True)
 
             if self.is_clearcache_enabled:
                 cache_files = [f"{target_dir}/{x}" for x in os.listdir(target_dir)]
                 cache_files = list(filter(lambda x: x.endswith(self.target_file_type), cache_files))
                 cache_files = list(filter(lambda x: "cached_" in os.path.basename(x), cache_files))
             self.showdir()
+
+            if self.is_closewhendone_enabled:
+                self.mainwin.close()
+            else:
+                self.mainwin.setEnabled(True)
 
             print("Purge done!")
 
